@@ -22,10 +22,14 @@ export class UserController extends BaseController {
   }
 
   @Post('')
-  public async create(req: Request, res: Response) {
-    const user = new User(req.body);
-    await user.save();
-    return res.status(201).send(user);
+  public async create(req: Request, res: Response): Promise<Response | void> {
+    try {
+      const user = new User(req.body);
+      await user.save();
+      return res.status(201).send(user);
+    } catch (error: any) {
+      SendResponseError.sendCreateUpdateErrorResponse(res, error);
+    }
   }
 
   @Put('update')

@@ -1,5 +1,10 @@
 import AuthService from '~src/services/auth';
 import mongoose, { Document, Model } from 'mongoose';
+import {
+  validateEmail,
+  validateSizeText,
+  validatePasswordSizeAndCaracter,
+} from '~src/util/validation/User/validateUser';
 
 export interface User {
   _id?: string;
@@ -16,13 +21,37 @@ interface UserModel extends Omit<User, '_id'>, Document {}
 
 const schema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: {
+      type: String,
+      required: true,
+      validate: [
+        {
+          validator: (value: string) => validateSizeText(value, 5),
+          msg: 'Must contain at least 5 characters.',
+        },
+      ],
+    },
     email: {
       type: String,
       required: true,
       unique: true,
+      validate: [validateEmail, 'Please, type a valid email'],
     },
-    password: { type: String, required: true },
+    password: {
+      type: String,
+      required: true,
+      validate: [
+        {
+          validator: (value: string) => validatePasswordSizeAndCaracter(value),
+          msg: 'Must contain at least one special character and at least 8 characters.',
+        },
+        {
+          validator: (value: string) =>
+            validatePasswordSizeAndCaracter(value, true),
+          msg: 'There must be at least 5 characters equal to the text.',
+        },
+      ],
+    },
   },
   {
     toJSON: {
