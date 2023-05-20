@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import AuthService from '~src/services/auth';
 import ApiError from '~src/util/errors/api-error';
 
-export function authMiddleware(
+export function AuthMiddleware(
   req: Partial<Request>,
   res: Partial<Response>,
   next: NextFunction

@@ -63,3 +63,4 @@ typings/
 # typescript compiled code
 dist/
 
+tmp/

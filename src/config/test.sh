@@ -17,7 +17,7 @@ import {
   Put,
 } from '@overnightjs/core';
 import { Request, Response } from 'express';
-import { BaseController } from './baseController';
+import { BaseController } from './BaseController';
 
 @Controller('$string')
 export class $1Controller extends BaseController {
@@ -110,7 +110,7 @@ import {
   Put,
 } from '@overnightjs/core';
 import { Request, Response } from 'express';
-import { BaseController } from './baseController';
+import { BaseController } from './BaseController';
 
 @Controller('$string')
 export class $1Controller extends BaseController {

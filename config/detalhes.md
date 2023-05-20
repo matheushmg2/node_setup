@@ -21,6 +21,9 @@
 - yarn add bcrypt
 - yarn add -D @types/jsonwebtoken
 - yarn add jsonwebtoken
+- yarn add -D @types/multer
+- yarn add multer
+- yarn add cloudinary
 
 # Instalação e configuração do Tests - Jest
 

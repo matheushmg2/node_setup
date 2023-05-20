@@ -11,7 +11,7 @@ import { User } from '~src/models/user';
 import { BaseController } from './BaseController';
 import { SendResponseError } from '~src/util/errors/send-response-error';
 import AuthService from '~src/services/auth';
-import { authMiddleware } from '~src/middlewares/auth';
+import { AuthMiddleware } from '~src/middlewares/auth';
 
 @Controller('user')
 export class UserController extends BaseController {
@@ -33,7 +33,7 @@ export class UserController extends BaseController {
   }
 
   @Put('update')
-  @Middleware(authMiddleware)
+  @Middleware(AuthMiddleware)
   public async update(req: Request, res: Response): Promise<Response | void> {
     const { body, context } = req;
 

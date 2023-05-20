@@ -6,6 +6,7 @@ import { Application } from 'express';
 import cors from 'cors';
 import * as database from '~src/database/database';
 import { UserController } from './controllers/UserController';
+import { ImageController } from './controllers/ImageController';
 
 export class SetupServer extends Server {
   constructor(private port = process.env.PORT) {
@@ -29,7 +30,8 @@ export class SetupServer extends Server {
 
   private setupController(): void {
     const userController = new UserController();
-    this.addControllers([userController]);
+    const imageController = new ImageController();
+    this.addControllers([userController, imageController]);
   }
 
   private async databaseSetup(): Promise<void> {
