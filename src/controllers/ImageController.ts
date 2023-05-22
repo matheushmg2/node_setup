@@ -56,6 +56,25 @@ export class ImageController extends BaseController {
   @Put('update')
   public async update(req: Request, res: Response) {}
 
-  @Delete('delete')
-  public async delete(req: Request, res: Response) {}
+  @Delete('delete/:id')
+  public async delete(req: Request, res: Response) {
+    const result = cloudinary.v2;
+    result.config({
+      cloud_name: process.env.cloudinary_cloud_name,
+      api_key: process.env.cloudinary_api_key,
+      api_secret: process.env.cloudinary_api_secret
+    });
+
+    try {
+      const image = await Image.findOne({ _id: req.params.id });
+      if (req && image) {
+        await result.uploader.destroy(`user/${image.key}`);
+        await image.deleteOne({ _id: req.params.id });
+
+        res.status(201).json({ message: 'User deleted successfully' });
+      }
+    } catch (error: any) {
+      this.sendCreateUpdateErrorResponse(res, error);
+    }
+  }
 }
