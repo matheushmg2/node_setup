@@ -3,12 +3,17 @@ import multer from 'multer';
 import crypto from 'crypto';
 import ApiError from '~src/util/errors/api-error';
 import path from 'path';
+import fs from 'fs';
 
 export function ImageMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
+  const directoryPath = path.resolve(__dirname, '..', '..', 'tmp', 'uploads');
+  if (!fs.existsSync(directoryPath)) {
+    fs.mkdirSync(directoryPath);
+  }
   try {
     const storage = multer.diskStorage({
       destination: (req: any, file: any, cb: any) => {
