@@ -5,12 +5,14 @@ import {
   validateSizeText,
   validatePasswordSizeAndCaracter,
 } from '~src/util/validation/User/validateUser';
+import { Image } from './images';
 
 export interface User {
   _id?: string;
   name: string;
   email: string;
   password: string;
+  image: Image;
 }
 
 export enum CUSTOM_VALIDATION {
@@ -51,6 +53,11 @@ const schema = new mongoose.Schema(
           msg: 'There must be at least 5 characters equal to the text.',
         },
       ],
+    },
+    image: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image',
+      require: true,
     },
   },
   {
