@@ -12,19 +12,47 @@ import { BaseController } from './BaseController';
 import { SendResponseError } from '~src/util/errors/send-response-error';
 import AuthService from '~src/services/auth';
 import { AuthMiddleware } from '~src/middlewares/auth';
+import { ImageMiddleware } from '~src/middlewares/Image';
+import cloudinary from 'cloudinary';
+import { CUSTOM_IMAGE, Image } from '~src/models/images';
 
 @Controller('user')
 export class UserController extends BaseController {
   @Get('')
   public async list(req: Request, res: Response) {
-    const user = await User.find();
+    const user = await User.find().populate('image');
     res.status(200).send(user);
   }
 
+  @Middleware(ImageMiddleware)
   @Post('')
   public async create(req: Request, res: Response): Promise<Response | void> {
+    const result = cloudinary.v2;
+    result.config({
+      cloud_name: process.env.cloudinary_cloud_name,
+      api_key: process.env.cloudinary_api_key,
+      api_secret: process.env.cloudinary_api_secret,
+    });
     try {
-      const user = new User(req.body);
+      let image: any = {};
+
+      if (req.file) {
+        const upload = await result.uploader.upload(`${req.file.path}`, {
+          public_id: `${CUSTOM_IMAGE.USER}/${req.file.filename}`,
+        });
+
+        const { originalname: name, size, filename: key } = req.file;
+
+        image = await Image.create({
+          name,
+          size,
+          key,
+          url: upload.secure_url,
+        });
+      }
+
+      const user = new User({ ...req.body, image });
+
       await user.save();
       return res.status(201).send(user);
     } catch (error: any) {
@@ -79,6 +107,13 @@ export class UserController extends BaseController {
 
   @Delete('delete')
   public async delete(req: Request, res: Response) {
+    const result = cloudinary.v2;
+    result.config({
+      cloud_name: process.env.cloudinary_cloud_name,
+      api_key: process.env.cloudinary_api_key,
+      api_secret: process.env.cloudinary_api_secret,
+    });
+
     const { id } = req.body;
     const user = await User.findOne({ _id: id });
     if (!user) {
@@ -88,6 +123,20 @@ export class UserController extends BaseController {
       });
       return;
     }
+    try {
+      if (user.image._id) {
+        const image = await Image.findOne({ _id: user.image._id.toString() });
+        if (req && image) {
+          await result.uploader.destroy(`${CUSTOM_IMAGE.USER}/${image.key}`);
+          await image.deleteOne({ _id: req.params.id });
+          await User.deleteOne({ _id: id });
+          res.status(201).json({ message: 'User deleted successfully' });
+        }
+      }
+    } catch (error: any) {
+      SendResponseError.sendCreateUpdateErrorResponse(res, error);
+    }
+    /*
 
     try {
       await User.deleteOne({ _id: id });
@@ -95,6 +144,6 @@ export class UserController extends BaseController {
       res.status(201).json({ message: 'User deleted successfully' });
     } catch (error: any) {
       SendResponseError.sendCreateUpdateErrorResponse(res, error);
-    }
+    }*/
   }
 }
