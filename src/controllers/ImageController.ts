@@ -8,12 +8,12 @@ import {
 } from '@overnightjs/core';
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController';
-import { Image } from '~src/models/images';
+import { CUSTOM_IMAGE, Image } from '~src/models/images';
 import { ImageMiddleware } from '~src/middlewares/Image';
-import cloudinary from 'cloudinary';
 import { SendResponseError } from '~src/util/errors/send-response-error';
 import { AuthMiddleware } from '~src/middlewares/auth';
 import { User } from '~src/models/user';
+import { Uploader } from '~src/util/cloudinary/Uploader';
 
 @Controller('image')
 export class ImageController extends BaseController {
@@ -26,17 +26,12 @@ export class ImageController extends BaseController {
   @Middleware([ImageMiddleware, AuthMiddleware])
   @Post('')
   public async create(req: Request, res: Response) {
-    const result = cloudinary.v2;
-    result.config({
-      cloud_name: process.env.cloudinary_cloud_name,
-      api_key: process.env.cloudinary_api_key,
-      api_secret: process.env.cloudinary_api_secret
-    });
+    const cloudinary = Uploader();
 
     try {
       if (req.file) {
-        const upload = await result.uploader.upload(`${req.file.path}`, {
-          public_id: `user/${req.file.filename}`,
+        const upload = await cloudinary.upload(`${req.file.path}`, {
+          public_id: `${CUSTOM_IMAGE.IMAGE}/${req.file.filename}`,
         });
 
         const { originalname: name, size, filename: key } = req.file;
@@ -59,17 +54,13 @@ export class ImageController extends BaseController {
 
   @Delete('delete')
   public async delete(req: Request, res: Response) {
-    const result = cloudinary.v2;
-    result.config({
-      cloud_name: process.env.cloudinary_cloud_name,
-      api_key: process.env.cloudinary_api_key,
-      api_secret: process.env.cloudinary_api_secret
-    });
+    const cloudinary = Uploader();
 
     try {
       const { id } = req.body;
 
       const user = await User.findOne({ image: id });
+      const image = await Image.findOne({ _id: id });
 
       if (user) {
         SendResponseError.sendErrorResponse(res, {
@@ -79,15 +70,22 @@ export class ImageController extends BaseController {
         return;
       }
 
-      const image = await Image.findOne({ _id: req.params.id });
+      if(!image) {
+        SendResponseError.sendErrorResponse(res, {
+          code: 401,
+          message: 'Non-existent image',
+        });
+        return;
+      }      
+      
       if (req && image) {
-        await result.uploader.destroy(`user/${image.key}`);
-        await image.deleteOne({ _id: req.params.id });
+        await cloudinary.destroy(`${CUSTOM_IMAGE.IMAGE}/${image.key}`);
+        await image.deleteOne({ _id: id });
 
-        res.status(201).json({ message: 'User deleted successfully' });
+        res.status(201).json({ message: 'Image deleted successfully' });
       }
     } catch (error: any) {
-      this.sendCreateUpdateErrorResponse(res, error);
+      SendResponseError.sendCreateUpdateErrorResponse(res, error);
     }
   }
 }

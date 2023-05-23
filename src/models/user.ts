@@ -1,11 +1,8 @@
 import AuthService from '~src/services/auth';
 import mongoose, { Document, Model } from 'mongoose';
-import {
-  validateEmail,
-  validateSizeText,
-  validatePasswordSizeAndCaracter,
-} from '~src/util/validation/User/validateUser';
+
 import { Image } from './images';
+import { Validate } from '~src/util/validation/User/validateUser';
 
 export interface User {
   _id?: string;
@@ -21,6 +18,8 @@ export enum CUSTOM_VALIDATION {
 
 interface UserModel extends Omit<User, '_id'>, Document {}
 
+const { SizeText, Email, PasswordSizeAndCaracter } = Validate;
+
 const schema = new mongoose.Schema(
   {
     name: {
@@ -28,7 +27,7 @@ const schema = new mongoose.Schema(
       required: true,
       validate: [
         {
-          validator: (value: string) => validateSizeText(value, 5),
+          validator: (value: string) => SizeText(value, 5),
           msg: 'Must contain at least 5 characters.',
         },
       ],
@@ -37,19 +36,18 @@ const schema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      validate: [validateEmail, 'Please, type a valid email'],
+      validate: [Email, 'Please, type a valid email'],
     },
     password: {
       type: String,
       required: true,
       validate: [
         {
-          validator: (value: string) => validatePasswordSizeAndCaracter(value),
+          validator: (value: string) => PasswordSizeAndCaracter(value),
           msg: 'Must contain at least one special character and at least 8 characters.',
         },
         {
-          validator: (value: string) =>
-            validatePasswordSizeAndCaracter(value, true),
+          validator: (value: string) => PasswordSizeAndCaracter(value, true),
           msg: 'There must be at least 5 characters equal to the text.',
         },
       ],

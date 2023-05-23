@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 export enum CUSTOM_IMAGE {
+  IMAGE = 'image',
   USER = 'user',
 }
 
@@ -15,9 +16,9 @@ export interface Image {
 
 const schema = new mongoose.Schema({
   name: { type: String, required: true },
-  size: { type: Number },
-  key: { type: String },
-  url: { type: String },
+  size: { type: Number, required: true },
+  key: { type: String, required: true },
+  url: { type: String, required: true },
   createAt: { type: Date, default: Date.now },
 });
 
