@@ -13,6 +13,7 @@ import { ImageMiddleware } from '~src/middlewares/Image';
 import cloudinary from 'cloudinary';
 import { SendResponseError } from '~src/util/errors/send-response-error';
 import { AuthMiddleware } from '~src/middlewares/auth';
+import { User } from '~src/models/user';
 
 @Controller('image')
 export class ImageController extends BaseController {
@@ -56,7 +57,7 @@ export class ImageController extends BaseController {
   @Put('update')
   public async update(req: Request, res: Response) {}
 
-  @Delete('delete/:id')
+  @Delete('delete')
   public async delete(req: Request, res: Response) {
     const result = cloudinary.v2;
     result.config({
@@ -66,6 +67,18 @@ export class ImageController extends BaseController {
     });
 
     try {
+      const { id } = req.body;
+
+      const user = await User.findOne({ image: id });
+
+      if (user) {
+        SendResponseError.sendErrorResponse(res, {
+          code: 401,
+          message: 'Existing user, unable to delete image.',
+        });
+        return;
+      }
+
       const image = await Image.findOne({ _id: req.params.id });
       if (req && image) {
         await result.uploader.destroy(`user/${image.key}`);
