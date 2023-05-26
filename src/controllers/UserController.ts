@@ -15,6 +15,7 @@ import { AuthMiddleware } from '~src/middlewares/auth';
 import { ImageMiddleware } from '~src/middlewares/Image';
 import { CUSTOM_IMAGE, Image } from '~src/models/images';
 import { Uploader } from '~src/util/cloudinary/Uploader';
+import { Validate } from '~src/util/validation/User/validateUser';
 
 @Controller('user')
 export class UserController extends BaseController {
@@ -48,6 +49,8 @@ export class UserController extends BaseController {
 
       const user = new User({ ...req.body, image });
 
+      user.save();
+
       return res.status(201).send(user);
     } catch (error: any) {
       SendResponseError.sendCreateUpdateErrorResponse(res, error);
@@ -55,24 +58,72 @@ export class UserController extends BaseController {
   }
 
   @Put('update')
-  @Middleware(AuthMiddleware)
+  @Middleware([AuthMiddleware, ImageMiddleware])
   public async update(req: Request, res: Response): Promise<Response | void> {
     const { body, context } = req;
+    const cloudinary = Uploader();
 
     const user = await User.findById({ _id: context?.userId });
 
-    if (req.body.email) {
+    if (!user) {
+      return SendResponseError.sendErrorResponse(res, {
+        code: 401,
+        message: 'User not found!',
+      });
+    }
+
+    let value: User = body;
+    if (!req.body.email) {
+      value = { ...body, email: user.email };
+    }
+
+    const { isValid, message } = await Validate.validation(value);
+
+    if (!isValid) {
+      try {
+        let image: any = {};
+        if (user && user.image._id) {
+          const data: User = body;
+
+          const imageOld = await Image.findById({ _id: user.image.toString() });
+
+          image = await Image.findOne({ _id: user.image.toString() });
+
+          if (image) {
+            if (req.file) {
+              const upload = await cloudinary.upload(`${req.file.path}`, {
+                public_id: `${CUSTOM_IMAGE.USER}/${req.file.filename}`,
+              });
+
+              const { originalname: name, size, filename: key } = req.file;
+
+              image = await Image.create({
+                name,
+                size,
+                key,
+                url: upload.secure_url,
+              });
+
+              user.set({ ...data, image });
+              user.save({ validateBeforeSave: false });
+            }
+            if (imageOld) {
+              await cloudinary.destroy(`${CUSTOM_IMAGE.USER}/${imageOld.key}`);
+              await imageOld.deleteOne({ _id: user.image._id.toString() });
+            }
+
+            return res.status(201).send(user);
+          }
+        }
+      } catch (error: any) {
+        SendResponseError.sendCreateUpdateErrorResponse(res, error);
+      }
+    } else {
       SendResponseError.sendErrorResponse(res, {
         code: 401,
-        message: 'Invalid field: email already exists',
+        message: message,
       });
-    } else {
-      if (user) {
-        const data: User = body;
-        user.set(data);
-        user.save({ validateBeforeSave: false });
-        return res.status(201).send(user);
-      }
+      return;
     }
   }
 
@@ -118,10 +169,10 @@ export class UserController extends BaseController {
         if (req && image) {
           await cloudinary.destroy(`${CUSTOM_IMAGE.USER}/${image.key}`);
           await image.deleteOne({ _id: req.params.id });
-          await User.deleteOne({ _id: id });
-          res.status(201).json({ message: 'User deleted successfully' });
         }
       }
+      await User.deleteOne({ _id: id });
+      res.status(201).json({ message: 'User deleted successfully' });
     } catch (error: any) {
       SendResponseError.sendCreateUpdateErrorResponse(res, error);
     }

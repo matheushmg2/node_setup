@@ -28,7 +28,7 @@ const schema = new mongoose.Schema(
       validate: [
         {
           validator: (value: string) => SizeText(value, 5),
-          msg: 'Must contain at least 5 characters.',
+          msg: 'Must contain at least 5 characters, letters only.',
         },
       ],
     },
