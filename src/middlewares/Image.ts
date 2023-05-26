@@ -4,12 +4,21 @@ import crypto from 'crypto';
 import ApiError from '~src/util/errors/api-error';
 import path from 'path';
 import fs from 'fs';
+import { User } from '~src/models/user';
+import { Image } from '~src/models/images';
 
-export function ImageMiddleware(
+export async function ImageMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
+  let user: any = '';
+  let imageOld: any = '';
+  if (req.context) {
+    user = await User.findById({ _id: req.context?.userId });
+    imageOld = await Image.findById({ _id: user?.image.toString() });
+  }
+
   const directoryPath = path.resolve(__dirname, '..', '..', 'tmp', 'uploads');
   if (!fs.existsSync(directoryPath)) {
     fs.mkdirSync(directoryPath);
@@ -50,6 +59,8 @@ export function ImageMiddleware(
     }).single('file');
 
     return upload(req, res, (): any => {
+      if (imageOld.key !== undefined) return next();
+
       if (!req.file) {
         return res.status?.(401).send(
           ApiError.format({

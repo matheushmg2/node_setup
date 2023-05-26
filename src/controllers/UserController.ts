@@ -64,6 +64,7 @@ export class UserController extends BaseController {
     const cloudinary = Uploader();
 
     const user = await User.findById({ _id: context?.userId });
+    const imageOld = await Image.findById({ _id: user?.image.toString() });
 
     if (!user) {
       return SendResponseError.sendErrorResponse(res, {
@@ -73,57 +74,83 @@ export class UserController extends BaseController {
     }
 
     let value: User = body;
+
     if (!req.body.email) {
       value = { ...body, email: user.email };
     }
 
     const { isValid, message } = await Validate.validation(value);
 
-    if (!isValid) {
-      try {
-        let image: any = {};
-        if (user && user.image._id) {
+    try {
+      if (!isValid) {
+        
+        if (req.file === undefined) {
+          value = { ...body, image: imageOld };
           const data: User = body;
+          const image = {
+            name: value.image.name,
+            size: value.image.size,
+            key: value.image.key,
+            url: value.image.url,
+          };
 
-          const imageOld = await Image.findById({ _id: user.image.toString() });
+          user.set({ ...data, image });
+          user.save({ validateBeforeSave: false });
+          return res.status(201).send(user);
+        } else {
+          let image: any = {};
+          if (user && user.image._id) {
+            const data: User = body;
 
-          image = await Image.findOne({ _id: user.image.toString() });
+            const imageOld = await Image.findById({
+              _id: user.image.toString(),
+            });
 
-          if (image) {
-            if (req.file) {
-              const upload = await cloudinary.upload(`${req.file.path}`, {
-                public_id: `${CUSTOM_IMAGE.USER}/${req.file.filename}`,
-              });
+            image = await Image.findOne({ _id: user.image.toString() });
 
-              const { originalname: name, size, filename: key } = req.file;
+            if (image) {
+              if (req.file) {
+                const upload = await cloudinary.upload(`${req.file.path}`, {
+                  public_id: `${CUSTOM_IMAGE.USER}/${req.file.filename}`,
+                });
 
-              image = await Image.create({
-                name,
-                size,
-                key,
-                url: upload.secure_url,
-              });
+                const { originalname: name, size, filename: key } = req.file;
 
-              user.set({ ...data, image });
-              user.save({ validateBeforeSave: false });
+                image = await Image.create({
+                  name,
+                  size,
+                  key,
+                  url: upload.secure_url,
+                });
+
+                user.set({ ...data, image });
+                user.save({ validateBeforeSave: false });
+              }
+              if (imageOld) {
+                await cloudinary.destroy(
+                  `${CUSTOM_IMAGE.USER}/${imageOld.key}`
+                );
+                await imageOld.deleteOne({ _id: user.image._id.toString() });
+              }
+
+              return res.status(201).send(user);
             }
-            if (imageOld) {
-              await cloudinary.destroy(`${CUSTOM_IMAGE.USER}/${imageOld.key}`);
-              await imageOld.deleteOne({ _id: user.image._id.toString() });
-            }
-
-            return res.status(201).send(user);
           }
         }
-      } catch (error: any) {
-        SendResponseError.sendCreateUpdateErrorResponse(res, error);
+      } else {
+        SendResponseError.sendErrorResponse(res, {
+          code: 401,
+          message: message,
+        });
+        return;
       }
-    } else {
       SendResponseError.sendErrorResponse(res, {
         code: 401,
-        message: message,
+        message: 'Error',
       });
       return;
+    } catch (error: any) {
+      SendResponseError.sendCreateUpdateErrorResponse(res, error);
     }
   }
 
